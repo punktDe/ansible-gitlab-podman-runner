@@ -78,6 +78,13 @@
     owner: root
     mode: "0644"
 
+- name: Ensure containers.d folder exists
+  ansible.builtin.file:
+    state: directory
+    dest: /etc/containers/containers.conf.d
+    owner: root
+    mode: "0755"
+
 - name: Use nftables as firewall in podman networks
   ansible.builtin.copy:
     content: |
