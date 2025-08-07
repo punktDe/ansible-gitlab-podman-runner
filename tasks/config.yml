@@ -140,10 +140,10 @@
     group: gitlab-runner
     mode: 0700
 
-- name: Pull the podman-extended image
+- name: Pull the runner image
   become: yes
   become_user: gitlab-runner
   containers.podman.podman_image:
-    name: docker-registry.punkt.de/docker/podman-extended
+    name: "{{ gitlab_runner.runner_image }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"
