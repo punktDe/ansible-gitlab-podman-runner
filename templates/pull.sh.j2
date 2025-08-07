@@ -1,0 +1,4 @@
+#!/bin/bash
+{% for image in gitlab_runner.pre_pulled_images %}
+podman --root /home/gitlab-runner/runner-images pull {{ image }}
+{% endfor %}

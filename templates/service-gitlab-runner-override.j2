@@ -1,0 +1,5 @@
+[Service]
+User=gitlab-runner
+Group=gitlab-runner
+ExecStart=
+ExecStart=/usr/bin/gitlab-runner run --working-directory /home/gitlab-runner --config /home/gitlab-runner/.gitlab-runner/config.toml --service gitlab-runner --user gitlab-runner

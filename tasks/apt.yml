@@ -1,0 +1,26 @@
+---
+- name: Install GPG
+  ansible.builtin.apt:
+    name: gpg
+
+- name: Add the gitlab runner repository
+  register: gitlab_runner_repository_added
+  ansible.builtin.deb822_repository:
+    name: "gitlab_runner"
+    uris: "{{ gitlab_runner.repository.apt.repository }}"
+    signed_by: "{{ gitlab_runner.repository.apt.key_url }}"
+    types: [deb]
+    components: [main]
+    suites: '{{ ansible_distribution_release }}'
+    state: present
+    enabled: yes
+
+- name: Update apt cache
+  when: gitlab_runner_repository_added.changed
+  changed_when: no
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install Gitlab Runner
+  ansible.builtin.apt:
+    name: gitlab-runner

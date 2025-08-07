@@ -1,0 +1,56 @@
+---
+argument_specs:
+  main:
+    short_description: Main entry point for the Gitlab Podman Runner role
+    options:
+      gitlab_runner:
+        type: "dict"
+        required: true
+        options:
+          gitlab_instances:
+            type: "dict"
+            default: {}
+            description:
+              - Gitlab instances which this runner should register with
+          config:
+            type: "dict"
+            required: true
+            options:
+              concurrent_runners:
+                type: "int"
+                default: 20
+                description:
+                  - Maximum number of runner containers that can run simultaneously
+          pre_pulled_images:
+            type: "list"
+            default: []
+            description:
+              - OCI images that should be pre-pulled on system
+          version:
+            type: "int"
+            default: 17
+            description:
+              - Major version of Gitlab Runner to be installed
+          runner_image:
+            type: "str"
+            default: docker-registry.punkt.de/docker/podman-extended
+            description:
+              - OCI image to be used for individual runner containers
+          repository:
+            type: "dict"
+            required: true
+            options:
+              apt:
+                type: "dict"
+                default: true
+                description:
+                  - Maximum number of runner containers that can run simultaneously
+                options:
+                  repository:
+                    type: "str"
+                    description:
+                      - APT repository to use for Gitlab Runner
+                  key_url:
+                    type: "str"
+                    description:
+                      - URL to the signing key for the APT repository

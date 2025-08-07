@@ -1,0 +1,82 @@
+---
+- name: Install python3-debian
+  ansible.builtin.apt:
+    update_cache: yes
+    name: python3-debian
+
+- name: Add 25.04 sources to the default Ubuntu sources
+  register: apt_podman_plucky_repository
+  ansible.builtin.deb822_repository:
+    name: "ubuntu"
+    uris: "http://archive.ubuntu.com/ubuntu/"
+    signed_by: "/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+    types: [deb]
+    components:
+      - main
+      - universe
+      - restricted
+      - multiverse
+    suites: >-
+      {{ ansible_distribution_release }}
+      {{ ansible_distribution_release }}-updates
+      {{ ansible_distribution_release }}-backports
+      {{ ansible_distribution_release }}-security
+      plucky
+    state: present
+    enabled: yes
+
+- name: Lock Podman version to 5.x (Plucky)
+  register: apt_podman_plucky_preference
+  ansible.builtin.copy:
+    content: |
+      Package: podman podman-compose buildah golang-github-containers-common crun libgpgme11t64 libgpg-error0 golang-github-containers-image catatonit conmon containers-storage
+      Pin: release n=plucky
+      Pin-Priority: 991
+
+      Package: libsubid4 netavark passt aardvark-dns containernetworking-plugins libslirp0 slirp4netns
+      Pin: release n=plucky
+      Pin-Priority: 991
+
+      Package: *
+      Pin: release n=plucky
+      Pin-Priority: 400
+    dest: /etc/apt/preferences.d/10-podman
+    owner: root
+    mode: "0644"
+
+- name: Update apt cache
+  when: apt_podman_plucky_repository.changed or apt_podman_plucky_preference.changed
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install Podman
+  ansible.builtin.apt:
+    name: podman=5.*
+
+- name: Modify the AppArmor pasta profile (avoids tcp 500 error)
+  notify: Reload AppArmor pasta rule
+  ansible.builtin.lineinfile:
+    validate: apparmor_parser -p %s
+    insertbefore: "}"
+    line: "  signal (receive),"
+    path: /etc/apparmor.d/usr.bin.pasta
+
+- name: Configure Docker registry mirror
+  ansible.builtin.copy:
+    content: |
+      unqualified-search-registries = ["docker.io"]
+      [[registry]]
+        location = "docker-io.registry-cache.punkt.hosting"
+        insecure = true
+    dest: /etc/containers/registries.conf.d/00-ansible.conf
+    owner: root
+    mode: "0644"
+
+- name: Use nftables as firewall in podman networks
+  ansible.builtin.copy:
+    content: |
+      [network]
+      firewall_driver="nftables"
+    dest: /etc/containers/containers.conf.d/50-netavark-nftables.conf
+    owner: root
+    mode: "0644"

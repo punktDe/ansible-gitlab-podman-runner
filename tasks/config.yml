@@ -1,0 +1,149 @@
+---
+- name: Adjust sysctl parameters
+  loop:
+    - name: vm.swappiness
+      value: 10
+    - name: vm.vfs_cache_pressure
+      value: 50
+    - name: kernel.keys.maxkeys
+      value: 1000000
+    - name: kernel.keys.maxbytes
+      value: 20000000
+    - name: fs.aio-max-nr
+      value: 4194304
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+
+- name: Ensure systemd override folder exists for Gitlab runner service
+  ansible.builtin.file:
+    owner: root
+    mode: "0755"
+    path: /etc/systemd/system/gitlab-runner.service.d
+    state: directory
+
+- name: Copy custom gitlab-runner service override
+  ansible.builtin.template:
+    owner: root
+    mode: "0755"
+    src: service-gitlab-runner-override.j2
+    dest: "/etc/systemd/system/gitlab-runner.service.d/override.conf"
+
+- name: Ensure necessary folders for gitlab-runner are present
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: gitlab-runner
+    group: gitlab-runner
+  with_items:
+    - /home/gitlab-runner/.gitlab-runner
+    - /home/gitlab-runner/.local
+    - /home/gitlab-runner/.local/bin
+    - /home/gitlab-runner/.local/share
+    - /home/gitlab-runner/.local/share/containers
+    - /home/gitlab-runner/runner-cache-temporary
+
+
+- name: Template out Gitlab Runner config template
+  ansible.builtin.template:
+    src: config.toml.template.j2
+    dest: "/home/gitlab-runner/.gitlab-runner/config.toml.template"
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: "0644"
+
+- name: Create a Ramdisk for gitlab-runner Podman files
+  ansible.posix.mount:
+    name: "/home/gitlab-runner/.local/share/containers"
+    src: tmpfs
+    fstype: tmpfs
+    opts: "defaults,size=80G"
+    state: mounted
+
+- name: Create a Ramdisk for gitlab-runner cache-global
+  ansible.posix.mount:
+    name: "/home/gitlab-runner/runner-cache-global"
+    src: tmpfs
+    fstype: tmpfs
+    opts: "defaults,size=20G"
+    state: mounted
+
+- name: Ensure read-only permissions for inside runner
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0700
+  with_items:
+    - /home/gitlab-runner/runner-cache-global
+    - /home/gitlab-runner/runner-images
+
+- name: Create tmpfiles configuration for cache folders to be created on boot
+  loop:
+    - composer
+    - npm
+    - yarn
+  notify:
+    - Refresh tmpfiles
+  ansible.builtin.lineinfile:
+    line: "'d' '/home/gitlab-runner/runner-cache-global/{{ item }}' '0700' 'gitlab-runner' 'gitlab-runner' '-'"
+    create: yes
+    dest: /etc/tmpfiles.d/00-gitlab-runner.conf
+    owner: root
+    mode: "0777"
+
+- name: Reload systemd configuration
+  ansible.builtin.systemd_service:
+    daemon_reload: yes
+
+- name: Enable loginctl linger for gitlab-runner
+  ansible.builtin.command:
+    cmd: loginctl enable-linger gitlab-runner
+    creates: "/var/lib/systemd/linger/gitlab-runner"
+
+- name: Populate getent facts
+  ansible.builtin.getent:
+    database: passwd
+
+- name: Set gitlab-runner user ID fact
+  ansible.builtin.set_fact:
+    gitlab_runner_uid: "{{ getent_passwd['gitlab-runner'].1 }}"
+
+- name: Export XDG_RUNTIME_DIR for gitlab-runner
+  ansible.builtin.lineinfile:
+    path: /home/gitlab-runner/.bash_profile
+    create: true
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: '0644'
+    line: "export XDG_RUNTIME_DIR=/run/user/{{ gitlab_runner_uid }}"
+
+- name: Enable the podman socket for gitlab-runner
+  become: yes
+  become_user: gitlab-runner
+  ansible.builtin.systemd_service:
+    name: podman.socket
+    state: started
+    enabled: yes
+    scope: user
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"
+
+- name: Template pull script for pre-defined Docker images
+  ansible.builtin.template:
+    src: pull.sh.j2
+    dest: "/home/gitlab-runner/.local/bin/pull.sh"
+    owner: gitlab-runner
+    group: gitlab-runner
+    mode: 0700
+
+- name: Pull the podman-extended image
+  become: yes
+  become_user: gitlab-runner
+  containers.podman.podman_image:
+    name: docker-registry.punkt.de/docker/podman-extended
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"

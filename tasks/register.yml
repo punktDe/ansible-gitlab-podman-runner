@@ -1,0 +1,77 @@
+---
+- name: Pull predefined Podman images
+  become: yes
+  become_user: gitlab-runner
+  changed_when: yes
+  ansible.builtin.command:
+    cmd: /home/gitlab-runner/.local/bin/pull.sh
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"
+
+- name: Unregister all existing runners
+  become: yes
+  become_user: gitlab-runner
+  changed_when: yes
+  failed_when: no
+  ansible.builtin.command:
+    cmd: gitlab-runner unregister --all-runners
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"
+
+- name: Stop the Gitlab runner service
+  ansible.builtin.systemd:
+    name: gitlab-runner
+    state: stopped
+
+- name: Register the Gitlab runner
+  become: yes
+  become_user: gitlab-runner
+  changed_when: yes
+  loop: "{{ gitlab_runner.gitlab_instances | dict2items }}"
+  ansible.builtin.shell: >-
+      gitlab-runner register
+      --non-interactive
+      --template-config /home/gitlab-runner/.gitlab-runner/config.toml.template
+      --url {{ item.value.url }}
+      --executor "docker"
+      --token "{{ item.value.runner_token }}"
+      --feature-flags "FF_NETWORK_PER_BUILD"
+      --feature-flags "FF_DISABLE_UMASK_FOR_DOCKER_EXECUTOR"
+      --feature-flags "FF_SCRIPT_SECTIONS"
+      --feature-flags "FF_ENABLE_JOB_CLEANUP"
+      --feature-flags "FF_USE_FASTZIP"
+      --feature-flags "FF_TIMESTAMPS"
+      --docker-enable-ipv6
+      --docker-image {{ gitlab_runner.runner_image }}
+      --docker-allowed-images {{ gitlab_runner.runner_image }}
+      --docker-privileged
+      --docker-pull-policy "if-not-present"
+      --docker-allowed-pull-policies "if-not-present"
+      --docker-allowed-pull-policies "never"
+      --docker-volumes "/dev/null:/etc/containers/mounts.conf"
+      --docker-devices "/dev/fuse"
+      --docker-volumes "/etc/containers/registries.conf.d:/etc/containers/registries.conf.d:ro"
+      --docker-volumes "/home/gitlab-runner/runner-images:/var/lib/shared:ro"
+      --docker-volumes "/home/gitlab-runner/runner-cache-temporary:/cache"
+      --docker-volumes "/home/gitlab-runner/runner-cache-global:/cache-global"
+      --docker-volumes "/etc/hosts:/etc/hosts:ro"
+      --docker-host "unix:///run/user/{{ gitlab_runner_uid }}/podman/podman.sock"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ gitlab_runner_uid }}"
+
+- name: Set Gitlab runner parameters
+  loop:
+    - line: "concurrent = {{ gitlab_runner.config.concurrent_runners }}"
+      regexp: "^concurrent = [0-9]+"
+    - line: "check_interval = 1"
+      regexp: "^check_interval = [0-9]+"
+  ansible.builtin.lineinfile:
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp }}"
+    path: "/home/gitlab-runner/.gitlab-runner/config.toml"
+
+- name: Start and enable Gitlab runner
+  ansible.builtin.systemd_service:
+    name: gitlab-runner
+    state: started
+    enabled: yes

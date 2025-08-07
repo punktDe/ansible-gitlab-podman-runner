@@ -1,0 +1,18 @@
+---
+gitlab_runner:
+  gitlab_instances: {}
+  # git.foo.bar:
+  #   url: "https://git.foo.bar"
+  #   runner_token: ""
+  # git.bar.foo:
+  #   url: "https://git.bar.foo"
+  #   runner_token: ""
+  config:
+    concurrent_runners: 20
+  pre_pulled_images: []
+  version: 17
+  runner_image: docker-registry.punkt.de/docker/podman-extended
+  repository:
+    apt:
+      repository: https://packages.gitlab.com/runner/gitlab-runner/{{ ansible_distribution | lower }}/
+      key_url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey

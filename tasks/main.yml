@@ -1,0 +1,15 @@
+---
+- name: Install Podman 5.x
+  ansible.builtin.include_tasks: podman.yml
+
+- name: Install Gitlab Runner
+  ansible.builtin.include_tasks: apt.yml
+
+- name: Configure Gitlab Runner
+  ansible.builtin.include_tasks: config.yml
+
+- name: Register Gitlab Runner
+  ansible.builtin.include_tasks: register.yml
+
+- name: Register Cronjobs
+  ansible.builtin.include_tasks: crontab.yml

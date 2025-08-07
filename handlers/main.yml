@@ -1,0 +1,12 @@
+---
+- name: Reload AppArmor pasta rule
+  changed_when: yes
+  ansible.builtin.command:
+    cmd: apparmor_parser -r /etc/apparmor.d/usr.bin.pasta
+
+- name: Refresh tmpfiles
+  changed_when: yes
+  ansible.builtin.command:
+    cmd: |
+      systemd-tmpfiles --clean
+      systemd-tmpfiles --create

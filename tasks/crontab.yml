@@ -1,0 +1,15 @@
+---
+- name: Install cronjob for pulling images after boot
+  ansible.builtin.cron:
+    name: "Run pull-script for podman images after boot"
+    special_time: reboot
+    job: /usr/bin/bash /home/gitlab-runner/.local/bin/pull.sh > /dev/null 2>&1
+    user: gitlab-runner
+
+- name: Install cronjob for pulling images daily
+  ansible.builtin.cron:
+    name: "Run pull-script for podman images daily"
+    hour: 3
+    minute: 30
+    job: /usr/bin/bash /home/gitlab-runner/.local/bin/pull.sh > /dev/null 2>&1
+    user: gitlab-runner
