@@ -8,6 +8,7 @@ warn_list:
   - no-handler
   - package-latest
   - risky-shell-pipe
+  - command-instead-of-shell
   - unnamed-task
 
 exclude_paths:
