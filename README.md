@@ -21,6 +21,7 @@ An Ansible role to setup a Podman 5.x-based Gitlab Runner on Ubuntu 24.04
 | `version` | Major version of Gitlab Runner to be installed | int | no | 17 |
 | `runner_image` | OCI image to be used for individual runner containers | str | no | docker-registry.punkt.de/docker/podman-extended |
 | `repository` |  | dict of 'repository' options | yes |  |
+| `ramdisk` |  | dict of 'ramdisk' options | yes |  |
 
 #### Options for `gitlab_runner.config`
 
@@ -32,7 +33,7 @@ An Ansible role to setup a Podman 5.x-based Gitlab Runner on Ubuntu 24.04
 
 |Option|Description|Type|Required|Default|
 |---|---|---|---|---|
-| `apt` | Maximum number of runner containers that can run simultaneously | dict of 'apt' options | no | True |
+| `apt` | Maximum number of runner containers that can run simultaneously | dict of 'apt' options | yes |  |
 
 #### Options for `gitlab_runner.repository.apt`
 
@@ -40,6 +41,26 @@ An Ansible role to setup a Podman 5.x-based Gitlab Runner on Ubuntu 24.04
 |---|---|---|---|---|
 | `repository` | APT repository to use for Gitlab Runner | str | no |  |
 | `key_url` | URL to the signing key for the APT repository | str | no |  |
+
+#### Options for `gitlab_runner.ramdisk`
+
+|Option|Description|Type|Required|Default|
+|---|---|---|---|---|
+| `enable` | Use a ramdisk for Podman data and runner caches | bool | no | False |
+| `podman` |  | dict of 'podman' options | yes |  |
+| `cache` |  | dict of 'cache' options | yes |  |
+
+#### Options for `gitlab_runner.ramdisk.podman`
+
+|Option|Description|Type|Required|Default|
+|---|---|---|---|---|
+| `size` | Size of a ramdisk for Podman data including the unit (e.g. G, M) | str | no | 80G |
+
+#### Options for `gitlab_runner.ramdisk.cache`
+
+|Option|Description|Type|Required|Default|
+|---|---|---|---|---|
+| `size` | Size of a ramdisk for runner caches including the unit (e.g. G, M) | str | no | 20G |
 
 ## Dependencies
 None.
