@@ -42,7 +42,7 @@ argument_specs:
             options:
               apt:
                 type: "dict"
-                default: true
+                required: true
                 description:
                   - Maximum number of runner containers that can run simultaneously
                 options:
@@ -54,3 +54,30 @@ argument_specs:
                     type: "str"
                     description:
                       - URL to the signing key for the APT repository
+          ramdisk:
+            type: "dict"
+            required: true
+            options:
+              enable:
+                type: "bool"
+                default: false
+                description:
+                  - Use a ramdisk for Podman data and runner caches
+              podman:
+                type: "dict"
+                required: true
+                options:
+                  size:
+                    type: "str"
+                    default: "80G"
+                    description:
+                      - Size of a ramdisk for Podman data including the unit (e.g. G, M)
+              cache:
+                type: "dict"
+                required: true
+                options:
+                  size:
+                    type: "str"
+                    default: "20G"
+                    description:
+                      - Size of a ramdisk for runner caches including the unit (e.g. G, M)

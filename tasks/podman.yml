@@ -53,6 +53,12 @@
   ansible.builtin.apt:
     name: podman=5.*
 
+- name: Install Apparmor dependencies
+  ansible.builtin.apt:
+    name:
+      - apparmor
+      - apparmor-utils
+
 - name: Modify the AppArmor pasta profile (avoids tcp 500 error)
   notify: Reload AppArmor pasta rule
   ansible.builtin.lineinfile:

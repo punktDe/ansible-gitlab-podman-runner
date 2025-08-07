@@ -55,19 +55,21 @@
     mode: "0644"
 
 - name: Create a Ramdisk for gitlab-runner Podman files
+  when: gitlab_runner.ramdisk.enable
   ansible.posix.mount:
     name: "/home/gitlab-runner/.local/share/containers"
     src: tmpfs
     fstype: tmpfs
-    opts: "defaults,size=80G"
+    opts: "defaults,size={{ gitlab_runner.ramdisk.podman.size }}"
     state: mounted
 
 - name: Create a Ramdisk for gitlab-runner cache-global
+  when: gitlab_runner.ramdisk.enable
   ansible.posix.mount:
     name: "/home/gitlab-runner/runner-cache-global"
     src: tmpfs
     fstype: tmpfs
-    opts: "defaults,size=20G"
+    opts: "defaults,size={{ gitlab_runner.ramdisk.cache.size }}"
     state: mounted
 
 - name: Ensure read-only permissions for inside runner

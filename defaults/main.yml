@@ -16,3 +16,9 @@ gitlab_runner:
     apt:
       repository: https://packages.gitlab.com/runner/gitlab-runner/{{ ansible_distribution | lower }}/
       key_url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+  ramdisk:
+    enable: no
+    podman:
+      size: 80G
+    cache:
+      size: 20G
